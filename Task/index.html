@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WPoets Full Stack Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body { background: #fff; }
+      .sidebar-tabs { min-height: 100vh; }
+      .tab-icon { width: 28px; height: 28px; margin-right: 8px; }
+      .category-btn { text-align: left; }
+      .main-image { aspect-ratio: 1 / 1; width: 100%; object-fit: cover; border-radius: 8px; }
+      .slide-bg { height: 260px; background-size: cover; background-position: center; border-radius: 8px; }
+      @media (max-width: 767.98px) {
+        .sidebar-tabs { display: none; }
+        .mobile-accordion { display: block; }
+      }
+      @media (min-width: 768px) {
+        .mobile-accordion { display: none; }
+      }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+      <div class="row g-4">
+        <div class="col-12 col-md-3">
+          <div class="sidebar-tabs">
+            <ul id="categoryTabs" class="nav nav-pills flex-column gap-2" role="tablist"></ul>
+          </div>
+          <div class="mobile-accordion" id="categoryAccordion"></div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <div id="slidesCarousel" class="carousel slide" data-bs-ride="false">
+            <div class="carousel-inner" id="carouselInner"></div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#slidesCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#slidesCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <img id="mainImage" class="main-image" alt="Selected" src="" />
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function resolvePath(p) {
+        if (!p) return '';
+        if (p.startsWith('http')) return p;
+        if (p.startsWith('../')) return p;
+        return '../' + p;
+      }
+
+      function renderDesktopTabs(categories) {
+        const $list = $('#categoryTabs').empty();
+        categories.forEach((cat, idx) => {
+          const active = idx === 0 ? 'active' : '';
+          const item = $(
+            `<li class="nav-item" role="presentation">
+              <button class="nav-link ${active} category-btn d-flex align-items-center" data-cat-id="${cat.id}" type="button" role="tab">
+                ${cat.icon_path ? `<img class="tab-icon" src="${resolvePath(cat.icon_path)}" alt="">` : ''}
+                <span>${cat.name}</span>
+              </button>
+            </li>`
+          );
+          item.find('button').on('click', () => loadSlides(cat));
+          $list.append(item);
+        });
+      }
+
+      function renderMobileAccordion(categories) {
+        const $acc = $('#categoryAccordion').empty();
+        categories.forEach((cat, idx) => {
+          const expanded = idx === 0 ? 'true' : 'false';
+          const show = idx === 0 ? 'show' : '';
+          const itemId = `acc-${cat.id}`;
+          const item = $(
+            `<div class="accordion" id="accWrap-${cat.id}">
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-${cat.id}">
+                  <button class="accordion-button ${idx!==0?'collapsed':''}" type="button" data-bs-toggle="collapse" data-bs-target="#${itemId}" aria-expanded="${expanded}" aria-controls="${itemId}">
+                    ${cat.icon_path ? `<img class="tab-icon" src="${resolvePath(cat.icon_path)}" alt="">` : ''}
+                    <span class="ms-1">${cat.name}</span>
+                  </button>
+                </h2>
+                <div id="${itemId}" class="accordion-collapse collapse ${show}" data-bs-parent="#accWrap-${cat.id}">
+                  <div class="accordion-body">
+                    ${cat.slides.map(s => `
+                      <div class="mb-3">
+                        <div class="slide-bg" style="background-image:url('${resolvePath(s.image_path)}')"></div>
+                        <div class="mt-2">
+                          <h6 class="mb-1">${s.title}</h6>
+                          <p class="mb-0 text-muted small">${s.description || ''}</p>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>`
+          );
+          $acc.append(item);
+        });
+      }
+
+      function loadSlides(category) {
+        const slides = category.slides || [];
+        const $inner = $('#carouselInner').empty();
+        if (!slides.length) {
+          $('#mainImage').attr('src', '');
+          return;
+        }
+        slides.forEach((s, idx) => {
+          const active = idx === 0 ? 'active' : '';
+          const item = $(
+            `<div class="carousel-item ${active}">
+              <div class="p-3">
+                <div class="slide-bg" style="background-image:url('${resolvePath(s.image_path)}')"></div>
+                <div class="mt-3">
+                  <h5 class="mb-1">${s.title}</h5>
+                  <p class="text-muted mb-0">${s.description || ''}</p>
+                </div>
+              </div>
+            </div>`
+          );
+          $inner.append(item);
+        });
+        $('#mainImage').attr('src', resolvePath(slides[0].image_path));
+
+        const carouselEl = document.querySelector('#slidesCarousel');
+        const carousel = bootstrap.Carousel.getOrCreateInstance(carouselEl, { interval: false, ride: false });
+        carousel.to(0);
+      }
+
+      document.getElementById('slidesCarousel').addEventListener('slid.bs.carousel', function (e) {
+        const idx = e.to;
+        const items = $('#carouselInner .carousel-item');
+        const node = items.eq(idx).find('.slide-bg');
+        const bg = node.css('background-image');
+        const urlMatch = /url\("?(.*?)"?\)/.exec(bg);
+        if (urlMatch && urlMatch[1]) {
+          $('#mainImage').attr('src', urlMatch[1]);
+        }
+      });
+
+      function init() {
+        $.getJSON('api/categories.php', function (categories) {
+          renderDesktopTabs(categories);
+          renderMobileAccordion(categories);
+          if (categories.length) loadSlides(categories[0]);
+        });
+      }
+
+      $(init);
+    </script>
+</body>
+</html>
